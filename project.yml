@@ -1,0 +1,26 @@
+name: CoMameDobreho
+options:
+  bundleIdPrefix: com.codobreho
+  deploymentTarget:
+    iOS: 9.0
+  xcodeVersion: "12.3"
+targets:
+  CoMameDobrehoApp:
+    type: application
+    platform: iOS
+    sources: [CoMameDobreho]
+    info:
+      path: CoMameDobreho/Info.plist
+      properties:
+        NSBluetoothAlwaysUsageDescription: "TODO"
+        UISupportedInterfaceOrientations: [
+          UIInterfaceOrientationPortrait,
+          UIInterfaceOrientationPortraitUpsideDown,
+          UIInterfaceOrientationLandscapeLeft,
+          UIInterfaceOrientationLandscapeRight
+        ]
+    postCompileScripts:
+      - script: swiftlint
+        name: SwiftLint
+      - script: "swiftformat . --swiftversion 5.3"
+        name: SwiftFormat
