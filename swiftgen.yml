@@ -1,0 +1,6 @@
+strings:
+  inputs:
+    - CoMameDobreho/en.lproj
+  outputs:
+    - templateName: structured-swift5
+      output: CoMameDobreho/Generated/Strings.swift
