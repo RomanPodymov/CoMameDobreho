@@ -33,6 +33,9 @@ private extension DictionaryObject {
 
 final class PersistentDataManager {
     private enum Key: String {
+        // swiftlint:disable identifier_name
+        case id
+        // swiftlint:enable identifier_name
         case dishes
     }
 
@@ -45,7 +48,28 @@ final class PersistentDataManager {
 
     init() {
         database = try? Database(name: Self.databaseName)
+        deleteAllDocumentsExceptForToday()
         currentDocument = database?.document(withID: databaseID())?.toMutable()
+    }
+
+    private func deleteAllDocumentsExceptForToday() {
+        guard let database = database else {
+            return
+        }
+        let query = QueryBuilder
+            .select(SelectResult.expression(Meta.id))
+            .from(DataSource.database(database))
+            .where(Meta.id.notEqualTo(Expression.string(databaseID())))
+        guard let documentsExceptForToday = try? query.execute() else {
+            return
+        }
+        for result in documentsExceptForToday {
+            if let idValue = result.string(forKey: Key.id.rawValue), let document = database.document(withID: idValue) {
+                do {
+                    try database.deleteDocument(document)
+                } catch {}
+            }
+        }
     }
 
     private func databaseID(for date: Date = Date()) -> String {
