@@ -7,6 +7,7 @@
 //
 
 import CoreBluetooth
+import SwifterSwift
 
 private enum CharacteristicId: String, CaseIterable {
     case soup = "b1faa5b2-95b1-436c-9bc5-82815228a3e1"
@@ -43,9 +44,7 @@ final class PeripheralManager: NSObject {
     public final func updateData(with offer: [DishRowTag: String], deviceName: String) {
         self.deviceName = deviceName
         self.offer = offer
-        if peripheralManager == nil {
-            peripheralManager = CBPeripheralManager(delegate: self, queue: nil)
-        }
+        peripheralManager ?= CBPeripheralManager(delegate: self, queue: nil)
     }
 }
 
@@ -79,8 +78,8 @@ extension PeripheralManager: CBPeripheralManagerDelegate {
             [
                 CBAdvertisementDataLocalNameKey: deviceName,
                 CBAdvertisementDataServiceUUIDsKey: [
-                    Self.mainServiceId,
-                ],
+                    Self.mainServiceId
+                ]
             ]
         )
     }
