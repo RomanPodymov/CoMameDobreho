@@ -37,12 +37,14 @@ private extension DictionaryObject {
     }
 }
 
+private protocol PersistentDataKey: RawRepresentable {}
+
 final class PersistentDataManager {
-    private enum DeviceInformationDocumentKey: String {
-        case mainInformation
+    private enum InformationForEveryDayDocumentKey: String, PersistentDataKey {
+        case deviceInformation
     }
 
-    private enum OfferDocumentKey: String {
+    private enum OfferDocumentKey: String, PersistentDataKey {
         // swiftlint:disable identifier_name
         case id
         // swiftlint:enable identifier_name
@@ -96,7 +98,7 @@ final class PersistentDataManager {
         return formatter.string(from: date)
     }
 
-    private static func getProperty<KeyType: RawRepresentable, ResultKeyType: RawRepresentable & CaseIterable>(
+    private static func getProperty<KeyType: PersistentDataKey, ResultKeyType: RowTag>(
         document: Document?,
         key: KeyType
     ) -> [ResultKeyType: String]? {
@@ -108,7 +110,7 @@ final class PersistentDataManager {
         )?.asRowTagDict()
     }
 
-    private func setProperty<KeyType: RawRepresentable, ResultKeyType: RawRepresentable>(
+    private func setProperty<KeyType: PersistentDataKey, ResultKeyType: RowTag>(
         document: inout MutableDocument?,
         documentId: String,
         key: KeyType,
@@ -131,7 +133,7 @@ final class PersistentDataManager {
         get {
             Self.getProperty(
                 document: deviceInformationDocument,
-                key: DeviceInformationDocumentKey.mainInformation
+                key: InformationForEveryDayDocumentKey.deviceInformation
             )
         }
 
@@ -139,7 +141,7 @@ final class PersistentDataManager {
             setProperty(
                 document: &deviceInformationDocument,
                 documentId: Self.deviceInformationDocumentKey,
-                key: DeviceInformationDocumentKey.mainInformation,
+                key: InformationForEveryDayDocumentKey.deviceInformation,
                 newValue: newValue
             )
         }

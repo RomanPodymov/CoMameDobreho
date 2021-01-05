@@ -15,11 +15,13 @@ enum SectionTag: String {
     case dishes
 }
 
-enum DeviceInformationRowTag: String, CaseIterable {
+protocol RowTag: CaseIterable, RawRepresentable {}
+
+enum DeviceInformationRowTag: String, RowTag {
     case name
 }
 
-enum DishRowTag: String, CaseIterable {
+enum DishRowTag: String, RowTag {
     case soup
     case firstDish
     case secondDish
