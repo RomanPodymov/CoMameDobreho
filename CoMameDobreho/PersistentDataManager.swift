@@ -63,7 +63,7 @@ final class PersistentDataManager {
         guard let documentsExceptForToday = try? query.execute() else {
             return
         }
-        for result in documentsExceptForToday {
+        documentsExceptForToday.forEach { result in
             if let idValue = result.string(forKey: Key.id.rawValue), let document = database.document(withID: idValue) {
                 do {
                     try database.deleteDocument(document)

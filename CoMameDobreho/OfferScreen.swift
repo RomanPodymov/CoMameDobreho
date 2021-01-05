@@ -70,7 +70,8 @@ final class OfferScreen: FormViewController {
             <<< ButtonRow { row in
                 row.title = L10n.OfferScreen.buttonSave
                 row.onCellSelection { [weak self] _, _ in
-                    self?.onSave()
+                    guard let self = self else { return }
+                    self.onSave()
                 }
             }
     }
@@ -91,10 +92,10 @@ final class OfferScreen: FormViewController {
         ) else {
             return
         }
-        if !saveData(
+        _ = saveData(
             sectionsDishes: sectionsDishes,
             rowDeviceName: rowDeviceName
-        ) {}
+        )
     }
 
     private func saveData(

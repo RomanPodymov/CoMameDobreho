@@ -45,6 +45,9 @@ final class PeripheralManager: NSObject {
         self.deviceName = deviceName
         self.offer = offer
         peripheralManager ?= CBPeripheralManager(delegate: self, queue: nil)
+        if peripheralManager.state == .poweredOn {
+            setupServices()
+        }
     }
 }
 
@@ -59,6 +62,7 @@ extension PeripheralManager: CBPeripheralManagerDelegate {
     }
 
     func setupServices() {
+        peripheralManager.removeAllServices()
         let mainCharacteristics = CharacteristicId.allCases.map {
             CBMutableCharacteristic(
                 type: CBUUID(string: $0.rawValue),
@@ -74,6 +78,7 @@ extension PeripheralManager: CBPeripheralManagerDelegate {
     }
 
     func startAdvertising() {
+        peripheralManager.stopAdvertising()
         peripheralManager.startAdvertising(
             [
                 CBAdvertisementDataLocalNameKey: deviceName,
