@@ -38,11 +38,14 @@ final class PeripheralManager: NSObject {
         string: "f64642dc-22f5-450f-a2db-a0ab07c3d47f"
     )
 
-    private var deviceName = ""
+    private var deviceInformation: [DeviceInformationRowTag: String]?
     private var offer: [DishRowTag: String]?
 
-    public final func updateData(with offer: [DishRowTag: String], deviceName: String) {
-        self.deviceName = deviceName
+    public final func updateData(
+        with offer: [DishRowTag: String],
+        deviceInformation: [DeviceInformationRowTag: String]
+    ) {
+        self.deviceInformation = deviceInformation
         self.offer = offer
         peripheralManager ?= CBPeripheralManager(delegate: self, queue: nil)
         if peripheralManager.state == .poweredOn {
@@ -81,7 +84,7 @@ extension PeripheralManager: CBPeripheralManagerDelegate {
         peripheralManager.stopAdvertising()
         peripheralManager.startAdvertising(
             [
-                CBAdvertisementDataLocalNameKey: deviceName,
+                CBAdvertisementDataLocalNameKey: deviceInformation?[.name] ?? "",
                 CBAdvertisementDataServiceUUIDsKey: [
                     Self.mainServiceId
                 ]

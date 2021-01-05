@@ -15,7 +15,7 @@ enum SectionTag: String {
     case dishes
 }
 
-enum DeviceInformationRowTag: String {
+enum DeviceInformationRowTag: String, CaseIterable {
     case name
 }
 
@@ -29,16 +29,17 @@ enum DishRowTag: String, CaseIterable {
 final class OfferScreen: FormViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupSectionDeviceInformation()
+        setupSectionDeviceInformation(deviceInformation: PersistentDataManager.shared.deviceInformation)
         setupSectionsDishes(dishes: PersistentDataManager.shared.dishes)
     }
 
-    private func setupSectionDeviceInformation() {
+    private func setupSectionDeviceInformation(deviceInformation: [DeviceInformationRowTag: String]?) {
         let sectionDeviceInformation = Section(L10n.OfferScreen.DeviceInformation.title)
         sectionDeviceInformation.tag = SectionTag.deviceInformation.rawValue
         form +++ sectionDeviceInformation
             <<< TextRow(DeviceInformationRowTag.name.rawValue) { row in
                 row.title = L10n.OfferScreen.DeviceInformation.name
+                row.value = deviceInformation?[.name]
                 row.placeholder = L10n.OfferScreen.textPlaceholder
             }
     }
@@ -49,22 +50,22 @@ final class OfferScreen: FormViewController {
         form +++ sectionsDishes
             <<< TextRow(DishRowTag.soup.rawValue) { row in
                 row.title = L10n.OfferScreen.Dishes.soup
-                row.value = dishes?[DishRowTag.soup]
+                row.value = dishes?[.soup]
                 row.placeholder = L10n.OfferScreen.textPlaceholder
             }
             <<< TextRow(DishRowTag.firstDish.rawValue) { row in
                 row.title = L10n.OfferScreen.Dishes.firstDish
-                row.value = dishes?[DishRowTag.firstDish]
+                row.value = dishes?[.firstDish]
                 row.placeholder = L10n.OfferScreen.textPlaceholder
             }
             <<< TextRow(DishRowTag.secondDish.rawValue) { row in
                 row.title = L10n.OfferScreen.Dishes.secondDish
-                row.value = dishes?[DishRowTag.secondDish]
+                row.value = dishes?[.secondDish]
                 row.placeholder = L10n.OfferScreen.textPlaceholder
             }
             <<< TextRow(DishRowTag.thirdDish.rawValue) { row in
                 row.title = L10n.OfferScreen.Dishes.thirdDish
-                row.value = dishes?[DishRowTag.thirdDish]
+                row.value = dishes?[.thirdDish]
                 row.placeholder = L10n.OfferScreen.textPlaceholder
             }
             <<< ButtonRow { row in
@@ -87,47 +88,57 @@ final class OfferScreen: FormViewController {
         ) else {
             return
         }
-        guard let rowDeviceName: TextRow = sectionDeviceInformation.rowBy(
-            tag: DeviceInformationRowTag.name.rawValue
-        ) else {
-            return
-        }
         _ = saveData(
-            sectionsDishes: sectionsDishes,
-            rowDeviceName: rowDeviceName
+            sectionDeviceInformation: sectionDeviceInformation,
+            sectionsDishes: sectionsDishes
         )
     }
 
-    private func saveData(
-        sectionsDishes: Section,
-        rowDeviceName: TextRow
-    ) -> Bool {
-        if rowDeviceName.value.isNilOrEmpty {
-            return false
-        }
-        let sectionDishesTagsAndValues: [(DishRowTag, String?)] = DishRowTag.allCases.compactMap {
-            guard let dishRow: TextRow = sectionsDishes.rowBy(tag: $0.rawValue) else {
+    private static func getData<KeyType: CaseIterable & RawRepresentable>(for section: Section) -> [KeyType: String]? {
+        let sectionTagsAndValues: [(KeyType, String?)] = KeyType.allCases.compactMap {
+            guard let tag = $0.rawValue as? String else {
                 return nil
             }
-            return ($0, dishRow.value)
+            guard let row: TextRow = section.rowBy(tag: tag) else {
+                return nil
+            }
+            return ($0, row.value)
         }
-        let sectionDishesTagsAndValuesWithoutNils: [(DishRowTag, String)] = sectionDishesTagsAndValues.compactMap {
-            if let value = $0.1 {
+        let sectionTagsAndValuesWithoutNils: [(KeyType, String)] = sectionTagsAndValues.compactMap {
+            if let value = $0.1, !value.isEmpty {
                 return ($0.0, value)
             } else {
                 return nil
             }
         }
-        if sectionDishesTagsAndValues.count != sectionDishesTagsAndValuesWithoutNils.count {
+        if sectionTagsAndValues.count != sectionTagsAndValuesWithoutNils.count {
+            return nil
+        }
+        return Dictionary(
+            uniqueKeysWithValues: sectionTagsAndValuesWithoutNils
+        )
+    }
+
+    private func saveData(
+        sectionDeviceInformation: Section,
+        sectionsDishes: Section
+    ) -> Bool {
+        guard let sectionDeviceInformationDict: [DeviceInformationRowTag: String] = Self.getData(
+            for: sectionDeviceInformation
+        ) else {
             return false
         }
-        let sectionDishesDict = Dictionary(
-            uniqueKeysWithValues: sectionDishesTagsAndValuesWithoutNils
-        )
+        guard let sectionDishesDict: [DishRowTag: String] = Self.getData(
+            for: sectionsDishes
+        ) else {
+            return false
+        }
+
+        PersistentDataManager.shared.deviceInformation = sectionDeviceInformationDict
         PersistentDataManager.shared.dishes = sectionDishesDict
         PeripheralManager.shared.updateData(
             with: sectionDishesDict,
-            deviceName: rowDeviceName.value ?? ""
+            deviceInformation: sectionDeviceInformationDict
         )
         return true
     }

@@ -9,30 +9,40 @@
 import CouchbaseLiteSwift
 import SwifterSwift
 
-private extension Dictionary where Key == DishRowTag, Value == String {
+private extension Dictionary where Key: RawRepresentable, Value == String {
     var asDictionaryObject: DictionaryObject {
         let result = MutableDictionaryObject()
         forEach {
-            result.setString(self[$0.key], forKey: $0.key.rawValue)
+            guard let key = $0.key.rawValue as? String else {
+                return
+            }
+            result.setString(self[$0.key], forKey: key)
         }
         return result
     }
 }
 
 private extension DictionaryObject {
-    var asDishRowTagDict: [DishRowTag: String] {
-        let dishRowTagsAndValues: [(DishRowTag, String)] = DishRowTag.allCases.compactMap {
-            guard let valueForKey = string(forKey: $0.rawValue) else {
+    func asRowTagDict<KeyType>() -> [KeyType: String] where KeyType: CaseIterable, KeyType: RawRepresentable {
+        let rowTagsAndValues: [(KeyType, String)] = KeyType.allCases.compactMap {
+            guard let key = $0.rawValue as? String else {
+                return nil
+            }
+            guard let valueForKey = string(forKey: key) else {
                 return nil
             }
             return ($0, valueForKey)
         }
-        return .init(uniqueKeysWithValues: dishRowTagsAndValues)
+        return .init(uniqueKeysWithValues: rowTagsAndValues)
     }
 }
 
 final class PersistentDataManager {
-    private enum Key: String {
+    private enum DeviceInformationDocumentKey: String {
+        case mainInformation
+    }
+
+    private enum OfferDocumentKey: String {
         // swiftlint:disable identifier_name
         case id
         // swiftlint:enable identifier_name
@@ -40,16 +50,19 @@ final class PersistentDataManager {
     }
 
     private static let databaseName = "offers"
+    private static let deviceInformationDocumentKey = "deviceInformationDocumentKey"
 
     static let shared = PersistentDataManager()
 
     private var database: Database?
-    private var currentDocument: MutableDocument?
+    private var deviceInformationDocument: MutableDocument?
+    private var currentOfferDocument: MutableDocument?
 
     init() {
         database = try? Database(name: Self.databaseName)
         deleteAllDocumentsExceptForToday()
-        currentDocument = database?.document(withID: databaseID())?.toMutable()
+        deviceInformationDocument = database?.document(withID: Self.deviceInformationDocumentKey)?.toMutable()
+        currentOfferDocument = database?.document(withID: offerDatabaseID())?.toMutable()
     }
 
     private func deleteAllDocumentsExceptForToday() {
@@ -59,12 +72,17 @@ final class PersistentDataManager {
         let query = QueryBuilder
             .select(SelectResult.expression(Meta.id))
             .from(DataSource.database(database))
-            .where(Meta.id.notEqualTo(Expression.string(databaseID())))
+            .where(Meta.id.notEqualTo(Expression.string(offerDatabaseID())).and(
+                Meta.id.notEqualTo(Expression.string(Self.deviceInformationDocumentKey))))
         guard let documentsExceptForToday = try? query.execute() else {
             return
         }
         documentsExceptForToday.forEach { result in
-            if let idValue = result.string(forKey: Key.id.rawValue), let document = database.document(withID: idValue) {
+            if let idValue = result.string(
+                forKey: OfferDocumentKey.id.rawValue
+            ), let document = database.document(
+                withID: idValue
+            ) {
                 do {
                     try database.deleteDocument(document)
                 } catch {}
@@ -72,26 +90,76 @@ final class PersistentDataManager {
         }
     }
 
-    private func databaseID(for date: Date = Date()) -> String {
+    private func offerDatabaseID(for date: Date = Date()) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }
 
-    public final var dishes: [DishRowTag: String]? {
+    private static func getProperty<KeyType: RawRepresentable, ResultKeyType: RawRepresentable & CaseIterable>(
+        document: Document?,
+        key: KeyType
+    ) -> [ResultKeyType: String]? {
+        guard let key = key.rawValue as? String else {
+            return nil
+        }
+        return document?.dictionary(
+            forKey: key
+        )?.asRowTagDict()
+    }
+
+    private func setProperty<KeyType: RawRepresentable, ResultKeyType: RawRepresentable>(
+        document: inout MutableDocument?,
+        documentId: String,
+        key: KeyType,
+        newValue: [ResultKeyType: String]?
+    ) {
+        guard let key = key.rawValue as? String else {
+            return
+        }
+        document ?= MutableDocument(id: documentId)
+        document!.setDictionary(
+            newValue?.asDictionaryObject,
+            forKey: key
+        )
+        do {
+            try database?.saveDocument(document!)
+        } catch {}
+    }
+
+    public final var deviceInformation: [DeviceInformationRowTag: String]? {
         get {
-            currentDocument?.dictionary(forKey: Key.dishes.rawValue)?.asDishRowTagDict
+            Self.getProperty(
+                document: deviceInformationDocument,
+                key: DeviceInformationDocumentKey.mainInformation
+            )
         }
 
         set {
-            currentDocument ?= MutableDocument(id: databaseID())
-            currentDocument!.setDictionary(
-                newValue?.asDictionaryObject,
-                forKey: Key.dishes.rawValue
+            setProperty(
+                document: &deviceInformationDocument,
+                documentId: Self.deviceInformationDocumentKey,
+                key: DeviceInformationDocumentKey.mainInformation,
+                newValue: newValue
             )
-            do {
-                try database?.saveDocument(currentDocument!)
-            } catch {}
+        }
+    }
+
+    public final var dishes: [DishRowTag: String]? {
+        get {
+            Self.getProperty(
+                document: currentOfferDocument,
+                key: OfferDocumentKey.dishes
+            )
+        }
+
+        set {
+            setProperty(
+                document: &currentOfferDocument,
+                documentId: offerDatabaseID(),
+                key: OfferDocumentKey.dishes,
+                newValue: newValue
+            )
         }
     }
 }
