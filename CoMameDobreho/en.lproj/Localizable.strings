@@ -15,3 +15,5 @@
 "offer_screen.dishes.third_dish" = "Third dish";
 "offer_screen.text_placeholder" = "Enter text here";
 "offer_screen.button_save" = "Save";
+"offer_screen.error.title" = "Error";
+"offer_screen.error.message" = "Please fill all the fields";

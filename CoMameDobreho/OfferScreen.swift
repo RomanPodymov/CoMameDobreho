@@ -9,6 +9,7 @@
 import Eureka
 import Foundation
 import SwifterSwift
+import UIKit
 
 enum SectionTag: String {
     case deviceInformation
@@ -26,6 +27,16 @@ enum DishRowTag: String, RowTag {
     case firstDish
     case secondDish
     case thirdDish
+}
+
+private extension UIViewController {
+    func displayAlert(title: String, message: String) {
+        let alert = UIAlertController(
+            title: title,
+            message: message
+        )
+        present(alert, animated: true)
+    }
 }
 
 final class OfferScreen: FormViewController {
@@ -90,10 +101,15 @@ final class OfferScreen: FormViewController {
         ) else {
             return
         }
-        _ = saveData(
+        if !saveData(
             sectionDeviceInformation: sectionDeviceInformation,
             sectionsDishes: sectionsDishes
-        )
+        ) {
+            displayAlert(
+                title: L10n.OfferScreen.Error.title,
+                message: L10n.OfferScreen.Error.message
+            )
+        }
     }
 
     private static func getData<KeyType: CaseIterable & RawRepresentable>(for section: Section) -> [KeyType: String]? {
