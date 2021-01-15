@@ -1,5 +1,7 @@
 # CoMameDobreho
 
+![CoMameDobreho](https://github.com/RomanPodymov/CoMameDobreho/blob/main/Screenshot/main.png "CoMameDobreho")
+
 App for restaurants to share dishes via Bluetooth. Works with [CoMateDobreho](https://github.com/RomanPodymov/CoMateDobreho).
 
 ### Setup
